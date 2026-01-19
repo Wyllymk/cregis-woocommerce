@@ -40,6 +40,7 @@ function cregis_wc_init() {
         return;
     }
 
+    require_once CREGIS_WC_PLUGIN_DIR . 'includes/class-cregis-compatibility.php';
     require_once CREGIS_WC_PLUGIN_DIR . 'includes/class-cregis-api.php';
     require_once CREGIS_WC_PLUGIN_DIR . 'includes/class-cregis-gateway.php';
     require_once CREGIS_WC_PLUGIN_DIR . 'includes/class-cregis-webhook.php';
@@ -74,6 +75,17 @@ function cregis_wc_register_blocks_support() {
     }
 }
 add_action('woocommerce_blocks_loaded', 'cregis_wc_register_blocks_support');
+
+/**
+ * Declare compatibility with WooCommerce features
+ */
+function cregis_wc_declare_compatibility() {
+    if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+    }
+}
+add_action('before_woocommerce_init', 'cregis_wc_declare_compatibility');
 
 /**
  * Plugin activation hook

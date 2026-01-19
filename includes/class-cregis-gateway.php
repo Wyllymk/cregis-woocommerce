@@ -35,6 +35,8 @@ class WC_Gateway_Cregis extends WC_Payment_Gateway {
             'refunds',
         );
         
+        $this->order_button_text = __('Proceed to Cryptocurrency Payment', 'cregis-woocommerce');
+        
         $this->init_form_fields();
         $this->init_settings();
         
@@ -54,6 +56,10 @@ class WC_Gateway_Cregis extends WC_Payment_Gateway {
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
         add_action('woocommerce_api_cregis_webhook', array($this, 'webhook_handler'));
         add_action('woocommerce_thankyou_' . $this->id, array($this, 'thankyou_page'));
+        
+        if ($this->is_available()) {
+            add_filter('woocommerce_get_order_item_totals', array($this, 'add_payment_info_to_order_totals'), 10, 2);
+        }
     }
     
     /**
@@ -303,6 +309,39 @@ class WC_Gateway_Cregis extends WC_Payment_Gateway {
             echo '<p>' . esc_html__('You will receive a confirmation email once the payment is confirmed.', 'cregis-woocommerce') . '</p>';
             echo '</div>';
         }
+    }
+    
+    /**
+     * Add payment info to order totals display
+     */
+    public function add_payment_info_to_order_totals($total_rows, $order) {
+        if ($order->get_payment_method() !== $this->id) {
+            return $total_rows;
+        }
+        
+        $tx_id = $order->get_meta('_cregis_transaction_hash');
+        $pay_amount = $order->get_meta('_cregis_pay_amount');
+        $pay_currency = $order->get_meta('_cregis_pay_currency');
+        
+        if ($tx_id && $pay_amount && $pay_currency) {
+            $payment_info = array(
+                'crypto_payment' => array(
+                    'label' => __('Cryptocurrency Payment:', 'cregis-woocommerce'),
+                    'value' => sprintf('%s %s', esc_html($pay_amount), esc_html($pay_currency))
+                )
+            );
+            
+            $position = array_search('payment_method', array_keys($total_rows), true);
+            if ($position !== false) {
+                $total_rows = array_slice($total_rows, 0, $position + 1, true) +
+                             $payment_info +
+                             array_slice($total_rows, $position + 1, null, true);
+            } else {
+                $total_rows = array_merge($total_rows, $payment_info);
+            }
+        }
+        
+        return $total_rows;
     }
     
     /**

@@ -72,7 +72,7 @@ final class WC_Gateway_Cregis_Blocks_Support extends AbstractPaymentMethodType {
     /**
      * Get supported features
      */
-    private function get_supported_features() {
+    public function get_supported_features() {
         return array(
             'products',
         );

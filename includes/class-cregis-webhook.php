@@ -294,22 +294,37 @@ class Cregis_Webhook {
      * Get order by order ID
      */
     private function get_order_by_order_id($order_number) {
-        $orders = wc_get_orders(array(
-            'limit' => 1,
-            'orderby' => 'date',
-            'order' => 'DESC',
-            'return' => 'objects',
-            'meta_query' => array(
-                array(
-                    'key' => '_order_number',
-                    'value' => $order_number,
-                    'compare' => '='
-                )
-            )
-        ));
+        global $wpdb;
         
-        if (!empty($orders)) {
-            return $orders[0];
+        if (class_exists('\Automattic\WooCommerce\Utilities\OrderUtil') && 
+            \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled()) {
+            
+            $order_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}wc_orders WHERE order_number = %s LIMIT 1",
+                $order_number
+            ));
+            
+            if ($order_id) {
+                return wc_get_order($order_id);
+            }
+        } else {
+            $orders = wc_get_orders(array(
+                'limit' => 1,
+                'orderby' => 'date',
+                'order' => 'DESC',
+                'return' => 'objects',
+                'meta_query' => array(
+                    array(
+                        'key' => '_order_number',
+                        'value' => $order_number,
+                        'compare' => '='
+                    )
+                )
+            ));
+            
+            if (!empty($orders)) {
+                return $orders[0];
+            }
         }
         
         $order_id = wc_get_order_id_by_order_key($order_number);
